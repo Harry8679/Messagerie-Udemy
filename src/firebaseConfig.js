@@ -1,7 +1,13 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut 
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// Remplace par ta propre configuration Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBIJn1e3WcfUAWQw4MmyPhMS8P7dmZJgHs",
   authDomain: "messagerie-app-aefa9.firebaseapp.com",
@@ -12,8 +18,28 @@ const firebaseConfig = {
   measurementId: "G-Y6HE3TJS08"
 };
 
-// Initialiser Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+// 🔹 Fonction pour se connecter avec Google
+const signInWithGoogle = async () => {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    console.error("Erreur lors de la connexion avec Google:", error);
+  }
+};
+
+// 🔹 Fonction pour se déconnecter
+const logOut = async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Erreur lors de la déconnexion:", error);
+  }
+};
+
+// 🔹 Exporte les fonctions et variables nécessaires
+export { db, auth, googleProvider, signInWithGoogle, logOut };
