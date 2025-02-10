@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { db, auth } from "../firebaseConfig";
+// import { db, auth } from "../firebaseConfig";
+import { db, auth } from '../../firebaseConfig';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "firebase/firestore";
 
 export default function ChatRoom() {
