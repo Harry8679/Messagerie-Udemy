@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { auth } from "../firebaseConfig";
+import UsersList from "./UsersList";
 
 const socket = io("http://localhost:6500");
 
@@ -37,7 +38,7 @@ export default function ChatRoom() {
 
   return (
     <div className="p-4 flex gap-4">
-      <div className="w-1/4 border-r p-4">
+      {/* <div className="w-1/4 border-r p-4">
         <h3 className="text-lg font-bold">Utilisateurs connectés</h3>
         <ul>
           {Object.values(onlineUsers).map((user, index) => (
@@ -46,7 +47,8 @@ export default function ChatRoom() {
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
+      <UsersList />
 
       <div className="w-3/4">
         <div className="h-64 overflow-y-auto border p-4">
