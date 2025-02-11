@@ -1,40 +1,67 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { auth, googleProvider, db } from "../firebaseConfig";
 import { signInWithPopup, signOut } from "firebase/auth";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { doc, updateDoc } from "firebase/firestore"; // ✅ Correction ici
 import io from "socket.io-client";
 
 const socket = io("http://localhost:6500");
 
 export default function Login() {
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+
+      if (currentUser) {
+        // Ajouter l'utilisateur à Firestore et marquer en ligne
+        const userRef = doc(db, "users", currentUser.uid);
+        setDoc(userRef, {
+          name: currentUser.displayName,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL,
+          online: true,
+        }, { merge: true });
+
+        socket.emit("user_connected", {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      setUser(result.user);
+      const user = result.user;
 
-      // ✅ Mise à jour de Firestore pour indiquer que l'utilisateur est en ligne
-      await updateDoc(doc(db, "users", result.user.uid), { online: true });
+      // Ajouter l'utilisateur à Firestore s'il n'existe pas
+      await setDoc(doc(db, "users", user.uid), {
+        name: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        online: true,
+      }, { merge: true });
 
       socket.emit("user_connected", {
-        uid: result.user.uid,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL,
+        uid: user.uid,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
       });
-
     } catch (error) {
-      console.error(error);
+      console.error("Erreur d'authentification :", error);
     }
   };
 
   const logOut = async () => {
     if (user) {
-      // ✅ Mettre à jour Firestore pour indiquer que l'utilisateur est hors ligne
       await updateDoc(doc(db, "users", user.uid), { online: false });
-
       await signOut(auth);
       socket.disconnect();
       setUser(null);
