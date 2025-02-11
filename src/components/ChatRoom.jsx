@@ -1,68 +1,73 @@
 import { useState, useEffect } from "react";
-import socket from "../socket";
-import { auth, db } from "../firebaseConfig";
-import { collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import io from "socket.io-client";
+import { auth } from "../firebaseConfig";
+
+const socket = io("http://localhost:5000");
 
 export default function ChatRoom() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const user = auth.currentUser;
+  const [onlineUsers, setOnlineUsers] = useState({});
 
   useEffect(() => {
-    // Récupérer les messages en temps réel depuis Firebase Firestore
-    const unsubscribe = onSnapshot(collection(db, "messages"), (snapshot) => {
-      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    if (auth.currentUser) {
+      socket.emit("user_connected", auth.currentUser.displayName);
+    }
 
-    // Écouter les nouveaux messages via WebSockets
     socket.on("receive_message", (message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages((prev) => [...prev, message]);
     });
 
-    return () => {
-      unsubscribe();
-      socket.off("receive_message");
-    };
+    socket.on("update_users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    return () => socket.disconnect();
   }, []);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-
-    const messageData = {
-      text: newMessage,
-      senderId: user.uid,
-      senderName: user.displayName,
-      timestamp: serverTimestamp()
-    };
-
-    // Enregistrer dans Firebase
-    await addDoc(collection(db, "messages"), messageData);
-
-    // Envoyer le message via WebSocket
-    socket.emit("send_message", messageData);
-
-    setNewMessage("");
+  const sendMessage = () => {
+    if (newMessage.trim() !== "") {
+      socket.emit("send_message", {
+        text: newMessage,
+        sender: auth.currentUser.displayName,
+      });
+      setNewMessage("");
+    }
   };
 
   return (
-    <div className="p-4 max-w-lg mx-auto">
-      <div className="h-64 overflow-y-auto border p-4 mb-4 bg-white rounded-lg">
-        {messages.map((msg) => (
-          <p key={msg.id} className={`p-2 ${msg.senderId === user.uid ? "text-right" : "text-left"}`}>
-            <strong>{msg.senderName}: </strong>{msg.text}
-          </p>
-        ))}
+    <div className="p-4 flex gap-4">
+      <div className="w-1/4 border-r p-4">
+        <h3 className="text-lg font-bold">Utilisateurs connectés</h3>
+        <ul>
+          {Object.values(onlineUsers).map((user, index) => (
+            <li key={index} className="text-green-500">
+              ● {user}
+            </li>
+          ))}
+        </ul>
       </div>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          className="border p-2 w-full"
-        />
-        <button onClick={sendMessage} className="bg-green-500 p-2 text-white rounded">
-          Envoyer
-        </button>
+
+      <div className="w-3/4">
+        <div className="h-64 overflow-y-auto border p-4">
+          {messages.map((msg, index) => (
+            <p key={index} className="p-2">
+              <strong>{msg.sender}: </strong>{msg.text}
+            </p>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            className="border p-2 w-full"
+          />
+          <button onClick={sendMessage} className="bg-green-500 p-2 text-white">
+            Envoyer
+          </button>
+        </div>
       </div>
     </div>
   );
