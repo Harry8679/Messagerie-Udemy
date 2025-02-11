@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { auth } from "../firebaseConfig";
 
-const socket = io("http://localhost:5000");
+const socket = io("http://localhost:6500");
 
 export default function ChatRoom() {
   const [messages, setMessages] = useState([]);
