@@ -2,28 +2,46 @@ import React from "react";
 import { auth, googleProvider } from "../firebaseConfig";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 import io from "socket.io-client";
 
 const socket = io("http://localhost:6500");
 
 export default function Login() {
   const [user, setUser] = React.useState(null);
-  const navigate = useNavigate(); // Permet de rediriger l'utilisateur
+  const navigate = useNavigate();
 
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
-      socket.emit("user_connected", result.user.displayName);
+
+      // ✅ Sauvegarder l'utilisateur dans Firestore
+      await setDoc(doc(db, "users", result.user.uid), {
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        online: true,
+      }, { merge: true });
+
+      socket.emit("user_connected", {
+        uid: result.user.uid,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+      });
+
     } catch (error) {
       console.error(error);
     }
   };
 
   const logOut = async () => {
-    await signOut(auth);
-    socket.disconnect();
-    setUser(null);
+    if (user) {
+      await signOut(auth);
+      await updateDoc(doc(db, "users", user.uid), { online: false });
+      socket.disconnect();
+      setUser(null);
+    }
   };
 
   return (
