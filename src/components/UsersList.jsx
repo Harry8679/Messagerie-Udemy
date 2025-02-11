@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebaseConfig";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, getDoc } from "firebase/firestore";
 
 export default function UsersList() {
   const [users, setUsers] = useState([]);
@@ -19,8 +19,8 @@ export default function UsersList() {
       <ul>
         {users.map((user) => (
           <li key={user.id} className="flex items-center gap-2 p-2 border-b">
-            <img src={user.photoURL} alt={user.displayName} className="w-10 h-10 rounded-full" />
-            <span>{user.displayName}</span>
+            <img src={user.photoURL} alt={user.name} className="w-10 h-10 rounded-full" />
+            <span>{user.name}</span>
             {user.online ? (
               <span className="text-green-500">● En ligne</span>
             ) : (
